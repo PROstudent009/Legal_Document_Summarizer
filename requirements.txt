@@ -1,0 +1,9 @@
+streamlit
+python-dotenv
+pinecone-client
+pdfplumber
+langchain
+langchain_community
+langchain_core
+langchain_groq
+sentence-transformers
