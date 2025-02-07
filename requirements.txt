@@ -1,9 +1,11 @@
 streamlit
 python-dotenv
 pinecone-client
-pdfplumber
 langchain
-langchain_community
-langchain_core
-langchain_groq
+langchain-community
+langchain-core
+langchain-groq
 sentence-transformers
+mail-parser
+PyMuPDF  
+pandas   
