@@ -1,44 +1,50 @@
 import streamlit as st
-from utils import load_document, store_vectors, retrieve_chunks
-from processors import generate_summary, detect_risks
-from config import load_env, initialize_pinecone
 
-load_env()
+st.set_page_config(page_title="Advanced AI-Driven Legal Document Summarization and Risk Assessment", layout="wide")
 
-st.title("Groq-based Document Summarizer with Risk Detection")
-st.markdown("## Upload your document to summarize & analyze risks.")
+import requests
+from bs4 import BeautifulSoup
+import legal_document_analysis
+import update_tracker  
 
-uploaded_file = st.file_uploader("Upload a file (TXT, PDF, CSV, EML)", type=["txt", "pdf", "csv", "eml"])
+def fetch_gdpr_recitals():
+    url = "https://gdpr-info.eu/recitals/"
+    response = requests.get(url)
 
-index = initialize_pinecone()
+    if response.status_code != 200:
+        st.error("Update The GDPR website.")
+        return {}
 
-if uploaded_file:
-    with st.spinner("Processing..."):
-        try:
-            doc = load_document(uploaded_file)
-            chunks = store_vectors(index, doc)
-            st.success("File uploaded and indexed successfully!")
-        except Exception as e:
-            st.error(f"Error processing file: {e}")
+    soup = BeautifulSoup(response.content, 'html.parser')
 
-if st.button("Summarize and Analyze Risks"):
-    col1, col2 = st.columns(2)
+    recitals = {}
+    articles = soup.find_all('div', class_='artikel')
     
-    with col1:
-        st.markdown("### Uploaded Document")
-        st.text_area("Document Content", value=doc[0].page_content[:2000], height=900)
-    
-    with col2:
-        st.markdown("### Generated Summary")
-        with st.spinner("Generating summary & risk analysis..."):
-            retrieved_text = retrieve_chunks(index)
-            
-            summary = generate_summary(retrieved_text)
-            risk_analysis = detect_risks(retrieved_text)
-            
-            st.write(summary)
-            st.markdown("### Risk Analysis")
-            st.write(risk_analysis)
+    for i, article in enumerate(articles):
+        if i >= 3:  
+            break
+        link = article.find('a')['href']
+        number = article.find('span', class_='nummer').text.strip('()')
+        title = article.find('span', class_='titel').text.strip()
+        
+        rec_response = requests.get(link)
+        if rec_response.status_code == 200:
+            rec_soup = BeautifulSoup(rec_response.content, 'html.parser')
+            content = rec_soup.find('div', class_='entry-content').get_text(strip=True)
+            recitals[number] = {'title': title, 'content': content}
+        else:
+            st.error(f"Failed to fetch recital {number} from {link}")
 
-            st.download_button("Download Summary", summary, "summary.txt", "text/plain")
-            st.download_button("Download Risk Analysis", risk_analysis, "risk_analysis.txt", "text/plain")
+    return recitals
+
+def main():
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Choose a page", ["Legal Document Analysis", "Update_tracker"])
+
+    if page == "Legal Document Analysis":
+        legal_document_analysis.display_legal_analysis_page()  
+    elif page == "Update_tracker":
+        update_tracker.display_Update_tracker_page()  
+
+if __name__ == "__main__":
+    main()
